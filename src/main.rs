@@ -1,22 +1,25 @@
-use std::{sync::Mutex, thread, time::Duration};
+use std::{sync::atomic::AtomicUsize, thread, time::Duration};
 
 fn main() {
-    let n = Mutex::new(0u32);
-    std::thread::scope(|s| {
-        for _ in 0..10 {
-            s.spawn(|| {
-                let Ok(mut guard) = n.lock() else {
-                    return;
-                };
-                for _ in 0..100 {
-                    *guard = (*guard).wrapping_add(1u32);
-                }
-                drop(guard);
-                thread::sleep(Duration::from_secs(1));
-            });
+    let num = AtomicUsize::new(0);
+
+    thread::scope(|s| {
+        s.spawn(|| {
+            for i in 0..100usize {
+                let processed = i.wrapping_add(1);
+                thread::sleep(Duration::from_millis(10));
+                num.store(processed, std::sync::atomic::Ordering::Relaxed);
+            }
+        });
+        loop {
+            let n = num.load(std::sync::atomic::Ordering::Relaxed);
+            if n == 100 {
+                break;
+            }
+            println!("Working {n}/100");
+            thread::sleep(Duration::from_millis(10));
         }
     });
-    if let Ok(res) = n.into_inner() {
-        assert_eq!(res, 1000);
-    }
+
+    println!("Done!");
 }
