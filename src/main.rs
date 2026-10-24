@@ -1,18 +1,14 @@
 fn main() {
-    let numbers = Vec::from_iter(0..=100);
-    let average =
-        match std::thread::spawn(move || numbers.iter().sum::<usize>().checked_div(numbers.len()))
-            .join()
-        {
-            Ok(Some(res)) => res,
-            Ok(None) => {
-                eprintln!("overflow or empty input");
-                return;
+    let numbers = Vec::from_iter(0..=3);
+    std::thread::scope(|s| {
+        s.spawn(|| {
+            println!("length {}", numbers.len());
+        });
+        s.spawn(|| {
+            for n in &numbers {
+                println!("{n}");
             }
-            Err(err) => {
-                eprintln!("{err:?}");
-                return;
-            }
-        };
-    println!("average: {average}");
+        });
+    });
+    println!("sum: {}", numbers.iter().sum::<usize>());
 }
