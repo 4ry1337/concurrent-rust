@@ -8,7 +8,19 @@ fn main() {
             s.spawn(|| {
                 for _ in 0..25 {
                     thread::sleep(Duration::from_millis(10));
-                    num.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    let mut current = num.load(std::sync::atomic::Ordering::Relaxed);
+                    loop {
+                        let new = current.wrapping_add(1);
+                        match num.compare_exchange(
+                            current,
+                            new,
+                            std::sync::atomic::Ordering::Relaxed,
+                            std::sync::atomic::Ordering::Relaxed,
+                        ) {
+                            Ok(_) => break,
+                            Err(v) => current = v,
+                        }
+                    }
                 }
             });
         }
